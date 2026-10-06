@@ -50,6 +50,16 @@ jobs:
           # Shell needs logind's D-Bus API; the container has no systemd session.
           python3 -m dbusmock --system --template logind > /tmp/gnome-workflows-logind.log 2>&1 &
           gdbus wait --system --timeout 10 org.freedesktop.login1
+          # dbusmock's GetUser concatenates a numeric UID without converting it.
+          gdbus call --system --dest org.freedesktop.login1 \
+            --object-path /org/freedesktop/login1 --method org.freedesktop.DBus.Mock.AddMethod \
+            org.freedesktop.login1.Manager GetUser u o \
+            'ret = "/org/freedesktop/login1/user/" + str(args[0])'
+          gdbus call --system --dest org.freedesktop.login1 \
+            --object-path /org/freedesktop/login1 --method org.freedesktop.DBus.Mock.AddSession \
+            ci seat0 "$(id -u)" "$(id -un)" true
+          gdbus call --system --dest org.freedesktop.login1 \
+            --object-path /org/freedesktop/login1 --method org.freedesktop.login1.Manager.GetUser "$(id -u)"
           gnome-shell --version | grep -E '^GNOME Shell 50\.'
 
       - name: Check out source

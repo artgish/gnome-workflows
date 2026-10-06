@@ -23,6 +23,19 @@ async function waitFor(check, message) {
     throw new Error(message);
 }
 
+async function movePointer(pointer, x, y) {
+    // Input is processed asynchronously, and an initial move from the screen
+    // edge can be constrained by Shell's panel/hot-corner pointer barriers.
+    for (let count = 0; count < 100; count++) {
+        pointer.notify_absolute_motion(GLib.get_monotonic_time(), x, y);
+        await Scripting.sleep(50);
+        const [actualX, actualY] = global.get_pointer();
+        if (Math.abs(actualX - x) < 1 && Math.abs(actualY - y) < 1)
+            return;
+    }
+    throw new Error(`Pointer did not reach ${x},${y}; actual position: ${global.get_pointer()}`);
+}
+
 export async function run() {
     await waitFor(() => Extension.lookupByUUID('gnome-workflows@artgish')?.store?.workflows.length === 3,
         'Extension did not enable or sample YAML did not load');
@@ -37,12 +50,17 @@ export async function run() {
     const pointer = seat.create_virtual_device(Clutter.InputDeviceType.POINTER_DEVICE);
     const keyboard = seat.create_virtual_device(Clutter.InputDeviceType.KEYBOARD_DEVICE);
     await Scripting.sleep(100);
+    // Leave the initial screen edge before approaching the panel button.
+    await movePointer(pointer, global.stage.width / 2, global.stage.height / 2);
     const [x, y] = extension._indicator.get_transformed_position();
     print(`Panel geometry: ${x},${y} ${extension._indicator.width}×${extension._indicator.height}`);
-    pointer.notify_absolute_motion(GLib.get_monotonic_time(),
+    await movePointer(pointer,
         x + extension._indicator.width / 2, y + extension._indicator.height / 2);
-    await Scripting.sleep(100);
-    print(`Pointer: ${global.get_pointer()} picked: ${global.stage.get_actor_at_pos(Clutter.PickMode.REACTIVE, x + extension._indicator.width / 2, y + extension._indicator.height / 2)}`);
+    const [pointerX, pointerY] = global.get_pointer();
+    const picked = global.stage.get_actor_at_pos(Clutter.PickMode.REACTIVE, pointerX, pointerY);
+    assert(picked === extension._indicator || extension._indicator.contains(picked),
+        `Pointer is over ${picked}, not the launcher button`);
+    print(`Pointer: ${pointerX},${pointerY} picked: ${picked}`);
     pointer.notify_button(GLib.get_monotonic_time(), 1, Clutter.ButtonState.PRESSED);
     await Scripting.sleep(50);
     pointer.notify_button(GLib.get_monotonic_time(), 1, Clutter.ButtonState.RELEASED);
