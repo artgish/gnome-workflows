@@ -28,6 +28,10 @@ export async function run() {
         'Extension did not enable or sample YAML did not load');
     const extension = Extension.lookupByUUID('gnome-workflows@artgish');
     assert(Main.panel.statusArea[extension.uuid] === extension._indicator, 'Panel indicator missing');
+    const configInfo = Gio.File.new_for_path(extension.store.path)
+        .query_info('unix::mode', Gio.FileQueryInfoFlags.NONE, null);
+    assert((configInfo.get_attribute_uint32('unix::mode') & 0o777) === 0o600,
+        'Default workflow configuration should be private');
     await Scripting.sleep(500);
     const seat = global.stage.context.get_backend().get_default_seat();
     const pointer = seat.create_virtual_device(Clutter.InputDeviceType.POINTER_DEVICE);
@@ -98,6 +102,10 @@ export async function run() {
     assert(extension.runner === null && extension.store === null, 'Runtime leaked after disable');
     await Main.extensionManager.enableExtension(extension.uuid);
     await waitFor(() => extension.store !== null, 'Extension did not re-enable');
+    await waitFor(() => extension.store.error === null, 'Configuration did not load after re-enable');
+    const [, configBytes] = config.load_contents(null);
+    assert(new TextDecoder().decode(configBytes) === 'workflows: []',
+        'Re-enabling overwrote the existing workflow configuration');
     extension.openLauncher();
     await Scripting.sleep(100);
     assert(extension._dialog.visible, 'Launcher did not reopen after re-enable');
@@ -106,8 +114,9 @@ export async function run() {
     // Preferences execute in GTK outside Shell, connected to this test compositor.
     const launcher = new Gio.SubprocessLauncher({flags: Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE});
     launcher.setenv('WAYLAND_DISPLAY', 'gnome-shell-test-display', true);
-    launcher.setenv('GI_TYPELIB_PATH', '/usr/lib/gnome-shell/girepository-1.0', true);
-    launcher.setenv('LD_LIBRARY_PATH', '/usr/lib/gnome-shell', true);
+    const shellLibraryDirectory = GLib.getenv('GNOME_SHELL_LIBDIR') ?? '/usr/lib/gnome-shell';
+    launcher.setenv('GI_TYPELIB_PATH', `${shellLibraryDirectory}/girepository-1.0`, true);
+    launcher.setenv('LD_LIBRARY_PATH', shellLibraryDirectory, true);
     const script = Gio.File.new_for_uri(import.meta.url).get_parent().get_child('prefs.test.js').get_path();
     const process = launcher.spawnv(['gjs', '-m', script, extension.path]);
     launcher.close();

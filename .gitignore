@@ -1,4 +1,6 @@
 /dist/
 /schemas/gschemas.compiled
 /node_modules/
+/.venv/
+/venv/
 *.log

@@ -5,9 +5,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test tests/workflows.test.js",
+    "test": "node --test tests/workflows.test.js tests/version-metadata.test.js",
     "test:gjs": "gjs -m tests/runtime.test.js",
     "test:shell": "bash scripts/test-shell.sh",
+    "test:review": "bash scripts/check-review.sh",
     "pack": "bash scripts/pack.sh",
     "install:extension": "bash scripts/install.sh"
   }

@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      release-tag:
+        description: Release tag to stamp into extension metadata
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Test, review, and package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    container:
+      image: registry.fedoraproject.org/fedora:44
+    defaults:
+      run:
+        shell: bash
+    env:
+      XDG_RUNTIME_DIR: /tmp/gnome-workflows-runtime
+      GNOME_SHELL_LIBDIR: /usr/lib64/gnome-shell
+      LIBGL_ALWAYS_SOFTWARE: '1'
+      RELEASE_TAG: ${{ inputs.release-tag || '' }}
+
+    steps:
+      - name: Install GNOME 50 and test dependencies
+        run: |
+          dnf install -y --setopt=install_weak_deps=False \
+            git nodejs npm gjs gnome-shell dbus-daemon mesa-dri-drivers \
+            python3 python3-pip python3-dbusmock shellcheck unzip google-noto-sans-fonts
+          mkdir -p "$XDG_RUNTIME_DIR"
+          chmod 700 "$XDG_RUNTIME_DIR"
+          mkdir -p /run/dbus
+          dbus-uuidgen --ensure=/etc/machine-id
+          dbus-daemon --system --fork --nopidfile
+          # Shell needs logind's D-Bus API; the container has no systemd session.
+          python3 -m dbusmock --system --template logind > /tmp/gnome-workflows-logind.log 2>&1 &
+          gdbus wait --system --timeout 10 org.freedesktop.login1
+          gnome-shell --version | grep -E '^GNOME Shell 50\.'
+
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install the review analyzer
+        run: |
+          python3 -m venv .venv
+          .venv/bin/python -m pip install -r requirements-review.txt
+
+      - name: Check shell scripts and settings schema
+        run: |
+          shellcheck scripts/*.sh
+          glib-compile-schemas --strict --dry-run schemas
+
+      - name: Test YAML parsing and shell commands
+        run: npm test
+
+      - name: Test GJS runtime
+        run: npm run test:gjs
+
+      - name: Test GNOME Shell and preferences and build the ZIP
+        run: npm run test:shell 2>&1 | tee /tmp/gnome-workflows-shell-test.log
+
+      - name: Validate the ZIP and fail on review findings
+        run: |
+          unzip -t dist/gnome-workflows@artgish.shell-extension.zip
+          npm run test:review
+
+      - name: Generate release checksums
+        working-directory: dist
+        run: sha256sum -- *.zip shexli-report.json > SHA256SUMS
+
+      - name: Upload the checked release bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: gnome-workflows
+          path: |
+            dist/*.zip
+            dist/SHA256SUMS
+            dist/shexli-report.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload test diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: test-diagnostics
+          path: |
+            /tmp/gnome-workflows-shell-test.log
+            /tmp/gnome-workflows-logind.log
+            /tmp/gnome-workflows-launcher.png
+            dist/shexli-report.json
+          if-no-files-found: ignore
+          retention-days: 7

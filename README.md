@@ -10,7 +10,8 @@ and **Esc** to close the dialog.
 Requires GNOME Shell 50, Bash, and the `gnome-extensions` command. No npm
 dependencies or build tools are needed to run the extension.
 
-From this project directory:
+Installing from this project directory also requires Node.js to generate the
+extension's version metadata:
 
 ```bash
 bash scripts/install.sh
@@ -35,6 +36,7 @@ bash scripts/pack.sh
 ```
 
 The archive is `dist/gnome-workflows@artgish.shell-extension.zip`.
+Packing uses a temporary directory and leaves the source metadata unchanged.
 
 ## Define workflows
 
@@ -150,6 +152,79 @@ screenshot is saved to `/tmp/gnome-workflows-launcher.png`.
 The extension uses [GNOME's ES module extension APIs](https://gjs.guide/extensions/overview/imports-and-modules.html)
 and [Gio subprocesses](https://gjs.guide/guides/gio/subprocesses.html).
 The bundled YAML parser and its license are documented in [vendor/README.md](vendor/README.md).
+
+## Publish on GNOME Extensions
+
+Before submitting, read the [review guidelines](https://gjs.guide/extensions/review-guidelines/review-guidelines.html)
+and [GNOME Code of Conduct](https://conduct.gnome.org/), then run:
+
+```bash
+npm test
+npm run test:gjs
+npm run test:shell
+npm run test:review
+```
+
+The Shell test rebuilds the ZIP. To build it independently, run `npm run pack`.
+If you need to set up the analyzer:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-review.txt
+```
+
+Tree-sitter is pinned because Shexli 0.2.1 crashed with Tree-sitter 0.26.0
+in this project's Python 3.14 environment. Review the analyzer's reported
+findings; its exit code alone does not indicate a clean result.
+
+Sign in at [extensions.gnome.org/upload](https://extensions.gnome.org/upload/)
+and submit `dist/gnome-workflows@artgish.shell-extension.zip`. GNOME assigns the
+numeric submission version during upload. The ZIP's `version-name` is generated
+from the package version or validated release tag. A clean local scan does not
+replace review.
+
+For the reviewer: Bash is required to run the user's shell commands. Workflows
+run only when selected by the user; enabling the extension never runs them.
+Disabling removes the UI and file monitoring and cancels pending callbacks;
+commands already launched continue independently. The ZIP includes the readable
+js-yaml parser, its upstream reference, and both license notices.
+
+## CI and releases
+
+GitHub Actions runs the checks on branch pushes, pull requests, and manual CI
+runs. Fedora 44 supplies GNOME Shell 50 for the headless launcher and preferences
+tests. CI also checks shell scripts and the settings schema, runs Node and GJS
+tests, builds the ZIP, and fails on any Shexli finding. Successful runs provide a
+`gnome-workflows` artifact with the ZIP, SHA-256 checksums, and review report.
+Test logs and the launcher screenshot are available in `test-diagnostics`.
+
+To publish a GitHub release, set the version in `package.json`, commit and push
+the desired code, then push a matching tag. For the current version:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The release workflow requires the tag to match `v` plus the package version,
+passes that tag to the packager, reruns CI on the tagged commit, verifies the
+resulting checksums, and publishes
+the tested bundle with generated release notes. Versions with a prerelease
+suffix, such as `0.2.0-rc.1`, create prereleases. It uses GitHub's built-in token and
+requires no additional secrets. GNOME Extensions submission remains a separate
+upload of the release ZIP, followed by GNOME's review.
+
+The version shown in GNOME comes from the ZIP's `version-name`: tag `v0.1.0`
+produces `0.1.0`, and `v0.2.0-rc.1` produces `0.2.0 rc.1`. GNOME only allows
+letters, numbers, spaces, and periods in this field, so hyphens and plus signs
+become spaces. Versions exceeding its 16-character limit fail validation.
+The numeric `version` remains controlled by extensions.gnome.org.
+See [GNOME's metadata rules](https://gjs.guide/extensions/overview/anatomy.html#version-name).
+Local and branch builds use `package.json`; to check a release build locally:
+
+```bash
+RELEASE_TAG=v0.1.0 npm run pack
+```
 
 ## Remove
 

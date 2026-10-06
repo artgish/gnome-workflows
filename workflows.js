@@ -101,6 +101,7 @@ export function expandHome(path, home) {
 }
 
 export function workflowArgv(workflow) {
+    // Bash is required to execute the shell syntax in user-defined workflows.
     // One shell preserves cd/export between steps. -e and pipefail stop on errors.
     return ['/bin/bash', '-e', '-o', 'pipefail', '-c', workflow.commands.join('\n')];
 }

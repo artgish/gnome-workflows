@@ -1,8 +1,8 @@
 {
   "uuid": "gnome-workflows@artgish",
   "name": "gnome-workflows",
-  "description": "Launch your YAML-defined command workflows from a searchable panel dialog.",
+  "description": "Launch your YAML-defined command workflows from a searchable panel dialog.\n\nDefine commands, working directories, and environment variables in a local YAML file. Open the launcher from the top panel or with Super + Alt + W.\n\nCommands run in Bash as your current user only when you launch a workflow. Requires Bash and GNOME Shell 50.",
   "shell-version": ["50"],
   "settings-schema": "org.gnome.shell.extensions.gnome-workflows",
-  "version": 1
+  "url": "https://github.com/artgish/gnome-workflows"
 }

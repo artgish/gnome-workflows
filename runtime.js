@@ -13,12 +13,23 @@ export function resolveConfigPath(setting) {
         : defaultConfigPath();
 }
 
-export function ensureDefaultConfig(extensionDirectory) {
+export async function ensureDefaultConfig(extensionDirectory, cancellable = null) {
     const file = Gio.File.new_for_path(defaultConfigPath());
     if (file.query_exists(null))
         return;
     GLib.mkdir_with_parents(file.get_parent().get_path(), 0o700);
-    const [, contents] = extensionDirectory.get_child('workflows.example.yaml').load_contents(null);
+    const source = extensionDirectory.get_child('workflows.example.yaml');
+    const [, contents] = await new Promise((resolve, reject) => {
+        source.load_contents_async(cancellable, (file, result) => {
+            try {
+                resolve(file.load_contents_finish(result));
+            } catch (error) {
+                reject(error);
+            }
+        });
+    });
+    if (cancellable?.is_cancelled())
+        return;
     try {
         const stream = file.create(Gio.FileCreateFlags.PRIVATE, null);
         try {
@@ -44,6 +55,7 @@ export class WorkflowStore {
         this._disposed = false;
         this._reloadSource = 0;
         this._monitor = null;
+        this._monitorChangedId = 0;
         this._cancellable = new Gio.Cancellable();
         this._watch();
         this.reload();
@@ -55,7 +67,7 @@ export class WorkflowStore {
             this._monitor = parent.query_exists(null)
                 ? parent.monitor_directory(Gio.FileMonitorFlags.NONE, null)
                 : this._file.monitor_file(Gio.FileMonitorFlags.NONE, null);
-            this._monitor.connect('changed', (_monitor, file, otherFile) => {
+            this._monitorChangedId = this._monitor.connect('changed', (_monitor, file, otherFile) => {
                 if (!file.equal(this._file) && !otherFile?.equal(this._file))
                     return;
                 if (this._reloadSource)
@@ -92,6 +104,9 @@ export class WorkflowStore {
     dispose() {
         this._disposed = true;
         this._cancellable.cancel();
+        if (this._monitorChangedId)
+            this._monitor.disconnect(this._monitorChangedId);
+        this._monitorChangedId = 0;
         this._monitor?.cancel();
         this._monitor = null;
         if (this._reloadSource)
@@ -176,6 +191,7 @@ export class WorkflowRunner {
         // Cancel observation only; user-launched commands continue independently.
         this._disposed = true;
         this._cancellable.cancel();
+        this.running.clear();
         this._onChange = null;
     }
 }
