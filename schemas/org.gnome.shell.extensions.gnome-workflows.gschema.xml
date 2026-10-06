@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.gnome-workflows" path="/org/gnome/shell/extensions/gnome-workflows/">
+    <key name="config-path" type="s">
+      <default>''</default>
+      <summary>Workflow YAML path</summary>
+      <description>Empty means ~/.config/gnome-workflows/workflows.yaml.</description>
+    </key>
+    <key name="open-launcher" type="as">
+      <default>['&lt;Super&gt;&lt;Alt&gt;w']</default>
+      <summary>Open the workflow launcher</summary>
+    </key>
+  </schema>
+</schemalist>

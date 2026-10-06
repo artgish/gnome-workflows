@@ -1,0 +1,14 @@
+{
+  "name": "gnome-workflows",
+  "version": "0.1.0",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/workflows.test.js",
+    "test:gjs": "gjs -m tests/runtime.test.js",
+    "test:shell": "bash scripts/test-shell.sh",
+    "pack": "bash scripts/pack.sh",
+    "install:extension": "bash scripts/install.sh"
+  }
+}

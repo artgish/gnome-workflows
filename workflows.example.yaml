@@ -1,0 +1,36 @@
+# Copied to ~/.config/gnome-workflows/workflows.yaml on first enable.
+# Edit this file with the launcher's “Edit YAML” button.
+workflows:
+  - id: open-home
+    name: Open home folder
+    description: Browse your files
+    icon: user-home-symbolic
+    tags: [files, home]
+    command: xdg-open "$HOME"
+
+  - id: system-info
+    name: System information
+    description: Save kernel and disk information to the workflow log
+    tags: [system, disk]
+    commands:
+      - uname -a
+      - df -h
+
+  - id: hello
+    name: Hello workflow
+    description: A small example with a working directory and environment variable
+    cwd: "~"
+    env:
+      GREETING: Hello from gnome-workflows
+    command: |
+      printf '%s\n' "$GREETING"
+      printf 'Working directory: %s\n' "$PWD"
+
+# A project workflow could look like this:
+#  - id: project-check
+#    name: Check my project
+#    cwd: ~/Projects/my-project
+#    tags: [dev, test]
+#    commands:
+#      - npm run lint
+#      - npm test

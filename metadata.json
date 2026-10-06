@@ -1,0 +1,8 @@
+{
+  "uuid": "gnome-workflows@artgish",
+  "name": "gnome-workflows",
+  "description": "Launch your YAML-defined command workflows from a searchable panel dialog.",
+  "shell-version": ["50"],
+  "settings-schema": "org.gnome.shell.extensions.gnome-workflows",
+  "version": 1
+}

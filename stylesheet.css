@@ -1,0 +1,21 @@
+.gnome-workflows-dialog { width: 560px; }
+.gnome-workflows-dialog .modal-dialog-content-box { spacing: 12px; }
+.gw-title { font-size: 22px; font-weight: bold; }
+.gw-subtitle, .gw-description, .gw-status, .gw-hint { color: #a6aab3; }
+.gw-search { margin-top: 8px; }
+.gw-status { font-size: 11px; }
+.gw-status.gw-error { color: #ffb4a9; }
+.gw-scroll { height: 300px; }
+.gw-workflow { border-radius: 10px; padding: 12px; margin-bottom: 4px; text-align: left; }
+.gw-workflow:hover, .gw-workflow:focus { background-color: rgba(255, 255, 255, 0.08); }
+.gw-workflow:selected { background-color: rgba(53, 132, 228, 0.26); }
+.gw-row { spacing: 12px; }
+.gw-icon { icon-size: 24px; }
+.gw-details { spacing: 4px; }
+.gw-name { font-weight: bold; }
+.gw-description { font-size: 12px; }
+.gw-run-label { font-size: 11px; color: #99c1f1; }
+.gw-empty { padding: 24px 8px; }
+.gw-actions { spacing: 8px; }
+.gw-action { padding: 8px 14px; }
+.gw-hint { font-size: 11px; margin-top: 4px; }
